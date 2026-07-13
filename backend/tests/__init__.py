@@ -1,0 +1,5 @@
+"""
+ProcureFlow AI — Test Suite.
+
+Tests will be added here as features are implemented.
+"""
