@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.invoice import Invoice
 from app.models.purchase_order import PurchaseOrder
+from app.models.vendor import Vendor
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -35,9 +36,59 @@ class PlaceholderResponse(BaseModel):
     message: str
 
 
+class PaymentTrendItem(BaseModel):
+    """Payment trend item schema."""
+    month: str
+    paid: int
+
+
+class AnalyticsResponse(BaseModel):
+    """Analytics response schema."""
+    active_vendors_count: int
+    pending_vendors_count: int
+    inactive_vendors_count: int
+    payment_trend: list[PaymentTrendItem]
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@router.get(
+    "",
+    response_model=AnalyticsResponse,
+    summary="Get analytics data",
+    description="Returns vendor status distribution and payment trends.",
+)
+def get_analytics(
+    db: Session = Depends(get_db),
+) -> AnalyticsResponse:
+    """Return analytics data including vendor statuses and payment trend."""
+    active_vendors_count = db.query(Vendor).filter(Vendor.status == "active").count()
+    pending_vendors_count = db.query(Vendor).filter(Vendor.status == "pending").count()
+    inactive_vendors_count = db.query(Vendor).filter(Vendor.status == "inactive").count()
+
+    invoices = db.query(Invoice).filter(Invoice.status == "paid").all()
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    monthly_paid_counts = {m: 0 for m in months}
+
+    for inv in invoices:
+        if inv.created_at:
+            m_name = inv.created_at.strftime("%b")
+            if m_name in monthly_paid_counts:
+                monthly_paid_counts[m_name] += 1
+
+    payment_trend = [
+        PaymentTrendItem(month=m, paid=monthly_paid_counts[m])
+        for m in months
+    ]
+
+    return AnalyticsResponse(
+        active_vendors_count=active_vendors_count,
+        pending_vendors_count=pending_vendors_count,
+        inactive_vendors_count=inactive_vendors_count,
+        payment_trend=payment_trend,
+    )
 
 @router.get(
     "/spending",

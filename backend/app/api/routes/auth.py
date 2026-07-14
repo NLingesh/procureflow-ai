@@ -103,6 +103,39 @@ def get_me(
     return current_user
 
 
+class ProfileUpdate(BaseModel):
+    """Profile update request payload."""
+    full_name: str | None = None
+    email: EmailStr | None = None
+
+
+@router.put(
+    "/me",
+    response_model=UserResponse,
+    summary="Update current user profile",
+)
+def update_me(
+    payload: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Update current user profile details."""
+    if payload.email and payload.email != current_user.email:
+        # Check if email is already taken
+        existing = db.query(User).filter(User.email == payload.email).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+        current_user.email = payload.email
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 class MessageResponse(BaseModel):
     message: str
 
