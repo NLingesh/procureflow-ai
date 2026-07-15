@@ -1,0 +1,16 @@
+[Unit]
+Description=ProcureFlow AI Backend FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/wiz/Desktop/procureflow-ai/backend
+ExecStart=/home/wiz/Desktop/procureflow-ai/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+Environment=PORT=8000
+Environment=HOST=127.0.0.1
+EnvironmentFile=/home/wiz/Desktop/procureflow-ai/backend/.env
+
+[Install]
+WantedBy=default.target
